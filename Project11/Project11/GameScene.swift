@@ -12,6 +12,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate
 {
     
     var scoreLabel: SKLabelNode!
+    var editLabel: SKLabelNode!
+    var ballsLabel: SKLabelNode!
+    
+    var number_of_balls = 0
+    {
+        didSet
+        {
+            ballsLabel.text = "Balls: \(number_of_balls)"
+        }
+    }// num balls
+    var balls = [String]()
     
     var score = 0
     {
@@ -21,7 +32,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         }//didSet
     }//score
     
-    var editLabel: SKLabelNode!
+   
     
     var editingMode: Bool = false
     {
@@ -41,45 +52,53 @@ class GameScene: SKScene, SKPhysicsContactDelegate
     override func didMove(to view: SKView)
     {
         let background = SKSpriteNode(imageNamed: "background")
-        background.position = CGPoint(x: 512, y: 384)
-        background.blendMode = .replace
-        background.zPosition = -1
+        background.position = CGPoint(x: 512, y: 384)                                                   //middle of the screen
+        background.blendMode = .replace                                                                 // blendmode how node is drawn  and is faster
+        background.zPosition = -1                                                                       // behind everything else
         addChild(background)
         
         scoreLabel = SKLabelNode(fontNamed: "Chalkduster")
         scoreLabel.text = "Score: 0"
         scoreLabel.horizontalAlignmentMode = .right
-        scoreLabel.position = CGPoint(x: 980, y: 700)
+        scoreLabel.position = CGPoint(x: 940, y: 700)                                                   // top right
         addChild(scoreLabel)
         
         editLabel = SKLabelNode(fontNamed:  "Chalkduster")
         editLabel.text = "Edit"
-        editLabel.position = CGPoint(x: 80, y: 700)
+        editLabel.position = CGPoint(x: 80, y: 700)                                                     // top left
         addChild(editLabel)
         
         
         physicsBody = SKPhysicsBody(edgeLoopFrom: frame)                                                //falling effect
-        physicsWorld.contactDelegate = self
+        physicsWorld.contactDelegate = self                                                             // contact in the object
         
         
-        makeSlot(at: CGPoint(x: 128, y: 0), isGood: true)
+        makeSlot(at: CGPoint(x: 128, y: 0), isGood: true)                                               // bottom left
         makeSlot(at: CGPoint(x: 384, y: 0), isGood: false)
         makeSlot(at: CGPoint(x: 640, y: 0), isGood: true)
         makeSlot(at: CGPoint(x: 896, y: 0), isGood: false)
         
-        makeBouncer(at: CGPoint(x: 0, y: 0))
+        makeBouncer(at: CGPoint(x: 0, y: 0))                                                            //bottom left corner
         makeBouncer(at: CGPoint(x: 256, y: 0))
         makeBouncer(at: CGPoint(x: 512, y: 0))
         makeBouncer(at: CGPoint(x: 768, y: 0))
         makeBouncer(at: CGPoint(x: 1024, y: 0))
         
+        
+        ballsLabel = SKLabelNode(fontNamed:  "Chalkduster")
+        ballsLabel.text = "Balls: 0"
+        scoreLabel.horizontalAlignmentMode = .center
+        ballsLabel.position = CGPoint(x: 512, y: 700)
+        addChild(ballsLabel)
+        
    
     }
 
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?)                           // user touches the screen
+    {
         guard let touch = touches.first else {return}                                                   // find first touch on screen
-        let location = touch.location(in: self)                                                         // find the touch
         
+        let location = touch.location(in: self)                                                         // find the touch on the screen
         
         let objects = nodes(at: location)                                                               // scene parent class
         
@@ -104,19 +123,42 @@ class GameScene: SKScene, SKPhysicsContactDelegate
                 
                 box.physicsBody = SKPhysicsBody(rectangleOf: box.size)                                  // balls can bounce off box
                 box.physicsBody?.isDynamic = false                                                      //boxes cannot move
+                box.name = "box"                                                                        // node name
                 addChild(box)
                 
             }// if editingMode
             else                                                                                        //create ball
             {
-                let ball = SKSpriteNode(imageNamed: "ballRed")
+                                                                                                        // effects call the file name
+                balls += ["ballRed", "ballBlue", "ballCyan", "ballYellow", "ballGreen", "ballGrey", "ballPurple"]
+                guard let randomBalls = balls.randomElement()  else {return}
+                let ball = SKSpriteNode(imageNamed: randomBalls)
                 ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2.0)                 // behaves as a ball
                 ball.physicsBody?.restitution = 0.4                                                     // bouncyness
-                ball.physicsBody?.contactTestBitMask = ball.physicsBody?.collisionBitMask ?? 0          // collisionBitMask == what nodes to bump into
+                
+                
+                ball.physicsBody?.contactTestBitMask = ball.physicsBody?.collisionBitMask ?? 0          // collisionBitMask == which nodes to bump into
                                                                                                         // contactTestBitMask == which collisions do we want to know about
                                                                                                         //                       default set to nothing
-                ball.position = location
-                ball.name = "ball"
+                                                                                                        // bounce of everything
+                
+                ball.position = CGPoint(x: location.x, y: 768)                                          // where the user touches top of screen
+                ball.name = "ball"                                                                      // node name
+                
+            
+                if number_of_balls >= 5
+                {
+                    if let fireParticles = SKEmitterNode(fileNamed: "FireParticles")
+                    {
+                        
+                        fireParticles.position = location
+                        addChild(fireParticles)
+                    }//fire particles
+                   
+                    return
+                }//numballs
+                
+                number_of_balls += 1
                 addChild(ball)
                 
             } //else create ball
@@ -147,19 +189,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         {
             slotBase = SKSpriteNode(imageNamed: "slotBaseGood")
             slotGlow = SKSpriteNode(imageNamed: "slotGlowGood")
-            slotBase.name = "good"
+            slotBase.name = "good"                                                                     //node name
         }// end if
         else
         {
             slotBase = SKSpriteNode(imageNamed:  "slotBaseBad")
             slotGlow = SKSpriteNode(imageNamed: "slotGlowBad")
-            slotBase.name = "bad"
+            slotBase.name = "bad"                                                                   // node name
         }//end else
         
         slotBase.position = position
         slotGlow.position = position
         
-        slotBase.physicsBody = SKPhysicsBody(rectangleOf: slotBase.size)
+        slotBase.physicsBody = SKPhysicsBody(rectangleOf: slotBase.size)                                // rectange physics body of slotbase size
         slotBase.physicsBody?.isDynamic = false                                                         // doesnt move when hit
         
         
@@ -167,9 +209,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         addChild(slotBase)
         addChild(slotGlow)
         
-        let spin = SKAction.rotate(byAngle: .pi, duration: 10)
-        let spinForever = SKAction.repeatForever(spin)
-        slotGlow.run(spinForever)
+        let spin = SKAction.rotate(byAngle: .pi, duration: 10)                                          // spin of the slot
+                                                                                                        // spin is by radians
+        let spinForever = SKAction.repeatForever(spin)                                                  // repeating the spin
+        slotGlow.run(spinForever)                                                                       // repeatingly spinning
         
     }// makeSlot
    
@@ -185,7 +228,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         {
             destory(ball: ball)
             score -= 1
-        } // end if else
+        } // end ball
+        else if object.name == "box"
+        {
+            object.removeFromParent()                                                               // removes box
+        }// box
         
         
     }//end collision
@@ -194,19 +241,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate
     {
         if let fireParticles = SKEmitterNode(fileNamed: "FireParticles")                           // effects call the file name
         {
-            fireParticles.position = ball.position
+            fireParticles.position = ball.position                                                  // ball and fire at the same position
             addChild(fireParticles)
         }
             
         
         ball.removeFromParent()                                                                     // removes node from node tree
+        number_of_balls -= 1
     
     }//end destory
     
-    func didBegin(_ contact: SKPhysicsContact) {
+    func didBegin(_ contact: SKPhysicsContact)                                                      // what made contact which two bodies
+    {
         guard let nodeA = contact.bodyA.node else {return}
         guard let nodeB = contact.bodyB.node else {return}
-        
         if contact.bodyA.node?.name == "ball"                                                       // first contact == ball
         {
             collision(between: contact.bodyA.node!, object: nodeB)                                  // bodyA = ball what it hits is bodyB
@@ -216,9 +264,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate
         {
             collision(between: contact.bodyB.node!, object: nodeA)                                  // bodyB = ball what it hits is bodyA
         }//end else if
+        
     }//didBegin
     
-}
+}//endgameScene
 
 
 
